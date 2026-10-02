@@ -1,0 +1,20 @@
+{
+  "name": "معركة جوبر",
+  "short_name": "معركة جوبر",
+  "description": "لعبة إطلاق نار ثلاثية الأبعاد: دافع من خلف جدار مهدّم في جوبر وإدلب والساحل.",
+  "lang": "ar",
+  "dir": "rtl",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#15110f",
+  "theme_color": "#15110f",
+  "categories": ["games"],
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
