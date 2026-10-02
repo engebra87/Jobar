@@ -68,6 +68,10 @@ body{background:var(--night);color:var(--dust);font-family:var(--body);padding-i
 .stat{font-family:var(--display);font-size:clamp(18px,4vw,28px);color:var(--dust)}
 </style>
 
+<style>.install{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;max-width:560px}
+#installBtn{background:#2f7d4a!important;color:#fff!important;font-size:18px!important;padding:8px 22px!important}
+#howBtn{background:transparent!important;color:#e8dcc6!important;border:1px solid #8a7d6e!important;font-family:Tajawal,sans-serif!important;font-size:14px!important;padding:6px 14px!important}
+#howTxt{flex-basis:100%;font-size:14px!important;line-height:1.8;color:#efe4cf!important;background:rgba(0,0,0,.45);border-radius:8px;padding:10px 14px!important}</style>
 </head>
 <body>
 <div id="game">
@@ -83,6 +87,11 @@ body{background:var(--night);color:var(--dust);font-family:var(--body);padding-i
       <button type="button" data-stage="1">المرحلة 1 · جوبر</button>
       <button type="button" data-stage="2">المرحلة 2 · إدلب</button>
       <button type="button" data-stage="3">المرحلة 3 · الساحل</button>
+    </div>
+    <div class="install">
+      <button id="installBtn" type="button" hidden>تثبيت اللعبة على الهاتف</button>
+      <button id="howBtn" type="button">كيف أثبّتها؟</button>
+      <p id="howTxt" hidden></p>
     </div>
     <p class="keys">المس أو انقر للتصويب والإطلاق (اضغط مطوّلاً للرشق) · 1 رشاش · 2 RPG · 3 مدفعية · 4 قناص · R تلقيم · للتقريب: باعد إصبعين أو استخدم عجلة الفأرة</p>
   </div>
@@ -1149,6 +1158,19 @@ requestAnimationFrame(loop);
 })();
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+<script>
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+(()=>{const ib=document.getElementById('installBtn'),hb=document.getElementById('howBtn'),ht=document.getElementById('howTxt');let dp=null;
+  const standalone=matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  if(standalone){ib.hidden=true;hb.hidden=true;return}
+  addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;ib.hidden=false});
+  addEventListener('appinstalled',()=>{ib.hidden=true;ht.hidden=false;ht.textContent='تم التثبيت! ستجد أيقونة «جوبر» على شاشتك الرئيسية.'});
+  ib.onclick=async()=>{if(!dp)return;dp.prompt();await dp.userChoice.catch(()=>{});dp=null;ib.hidden=true};
+  const ua=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(ua),inApp=/FBAN|FBAV|Instagram|Line|wv\)|WebView|GSA/.test(ua),samsung=/SamsungBrowser/.test(ua);
+  hb.onclick=()=>{ht.hidden=!ht.hidden;ht.textContent=inApp?'أنت تفتح الرابط داخل تطبيق آخر. انسخ الرابط وافتحه في متصفح Chrome، ثم اضغط القائمة ⋮ واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».'
+    :ios?'في Safari: اضغط زر المشاركة (المربع مع السهم للأعلى) ثم اختر «إضافة إلى الشاشة الرئيسية».'
+    :samsung?'في متصفح سامسونج: اضغط القائمة ☰ ثم «إضافة صفحة إلى» ثم «الشاشة الرئيسية».'
+    :'في Chrome: اضغط القائمة ⋮ أعلى الشاشة ثم اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية». إن لم يظهر الخيار، أعد تحميل الصفحة مرة وانتظر ثواني.'}})();
+</script>
 </body>
 </html>
