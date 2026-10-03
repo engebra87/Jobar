@@ -1162,7 +1162,7 @@ requestAnimationFrame(loop);
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 (()=>{const ib=document.getElementById('installBtn'),hb=document.getElementById('howBtn'),ht=document.getElementById('howTxt');let dp=null;
   const standalone=matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone;
-  if(standalone){ib.hidden=true;hb.hidden=true;return}
+  if(standalone||location.protocol==='file:'){ib.hidden=true;hb.hidden=true;return}
   addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;ib.hidden=false});
   addEventListener('appinstalled',()=>{ib.hidden=true;ht.hidden=false;ht.textContent='تم التثبيت! ستجد أيقونة «جوبر» على شاشتك الرئيسية.'});
   ib.onclick=async()=>{if(!dp)return;dp.prompt();await dp.userChoice.catch(()=>{});dp=null;ib.hidden=true};
