@@ -1,4 +1,5 @@
 plugins { id 'com.android.application' }
+def runNo = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
 android {
     namespace 'com.engebra87.jobar'
     compileSdk 34
@@ -6,9 +7,20 @@ android {
         applicationId 'com.engebra87.jobar'
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName '1.0'
+        versionCode runNo
+        versionName "1.$runNo"
     }
-    buildTypes { release { minifyEnabled false } }
+    signingConfigs {
+        stable {
+            storeFile file('jobar.jks')
+            storePassword 'e3b75f698b36cbc241debfecf3f0958a'
+            keyAlias 'jobar'
+            keyPassword 'e3b75f698b36cbc241debfecf3f0958a'
+        }
+    }
+    buildTypes {
+        release { minifyEnabled false; signingConfig signingConfigs.stable }
+        debug { signingConfig signingConfigs.stable }
+    }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
