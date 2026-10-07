@@ -5,6 +5,8 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -28,6 +30,7 @@ public class MainActivity extends Activity {
         s.setAllowUniversalAccessFromFileURLs(true);
         web.setWebViewClient(new WebViewClient());
         web.setWebChromeClient(new WebChromeClient());
+        web.addJavascriptInterface(new Bridge(), "Android");
         setContentView(web);
         hideBars();
         if (state != null) web.restoreState(state);
@@ -45,5 +48,15 @@ public class MainActivity extends Activity {
     @Override protected void onPause() { super.onPause(); web.onPause(); }
     @Override protected void onResume() { super.onResume(); web.onResume(); }
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); web.saveState(out); }
-    @Override public void onBackPressed() { if (web.canGoBack()) web.goBack(); else super.onBackPressed(); }
+    public class Bridge {
+        @JavascriptInterface public void exit() {
+            runOnUiThread(new Runnable() { public void run() { finishAndRemoveTask(); } });
+        }
+    }
+
+    @Override public void onBackPressed() {
+        web.evaluateJavascript("(window.onAndroidBack?(onAndroidBack(),'ok'):'no')", new ValueCallback<String>() {
+            public void onReceiveValue(String v) { if (v == null || !v.contains("ok")) finish(); }
+        });
+    }
 }
