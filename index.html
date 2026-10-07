@@ -34,7 +34,7 @@ html,body{height:100%}
 body{background:var(--night);color:var(--dust);font-family:var(--body);padding-inline:16px;padding-block:10px;box-sizing:border-box;overflow:hidden}
 .frame{position:relative;width:100%;max-width:1200px;flex:1;min-height:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#000}
 .frame canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-#gl{filter:contrast(1.08) saturate(1.25)}
+#gl{filter:contrast(1.14) saturate(1.35)}
 #hud{touch-action:none;cursor:none}
 .bar{display:flex;gap:8px;width:100%;max-width:1200px;justify-content:center;flex-wrap:wrap}
 .bar button{font-family:var(--body);font-weight:800;font-size:16px;color:var(--dust);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 16px;min-width:84px;cursor:pointer}
@@ -126,7 +126,7 @@ function layout(){const W=innerWidth,H=innerHeight;rot=H>W&&W<900;game.classList
   if(rot){game.style.left=W+'px';game.style.top='0px';game.style.width=H+'px';game.style.height=W+'px'}else game.removeAttribute('style')}
 layout();addEventListener('resize',layout);addEventListener('orientationchange',()=>setTimeout(layout,200));
 const frame=document.getElementById('frame'),glc=document.getElementById('gl'),hud=document.getElementById('hud'),hx=hud.getContext('2d');
-const renderer=new THREE.WebGLRenderer({canvas:glc,antialias:true});renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
+const renderer=new THREE.WebGLRenderer({canvas:glc,antialias:true});renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
 renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
 const scene=new THREE.Scene();
 scene.fog=new THREE.Fog(0xd6c8b0,70,230);
@@ -521,7 +521,7 @@ function makeBoss(){const g=new THREE.Group(),vm=mat(0x4d5236),vm2=mat(0x383d27)
 /* ---------- particles ---------- */
 const parts=[];
 function particle(pos,o){const m=new THREE.SpriteMaterial({map:glowTex,color:o.color,transparent:true,depthWrite:false,opacity:o.op??1,blending:o.add?THREE.AdditiveBlending:THREE.NormalBlending});
-  const s=new THREE.Sprite(m);s.position.copy(pos);s.scale.setScalar(o.size);scene.add(s);parts.push({s,vel:o.vel||new THREE.Vector3(),life:o.life,max:o.life,grow:o.grow||0,op:o.op??1,grav:o.grav||0});if(parts.length>700)killPart(0)}
+  const s=new THREE.Sprite(m);s.position.copy(pos);s.scale.setScalar(o.size);scene.add(s);parts.push({s,vel:o.vel||new THREE.Vector3(),life:o.life,max:o.life,grow:o.grow||0,op:o.op??1,grav:o.grav||0});if(parts.length>900)killPart(0)}
 function killPart(i){const p=parts[i];scene.remove(p.s);p.s.material.dispose();parts.splice(i,1)}
 const V=(x,y,z)=>new THREE.Vector3(x,y,z);
 function dust(p,n,col=0x9a8670){for(let i=0;i<n;i++)particle(p,{color:col,size:R(.15,.4),vel:V(R(-1.5,1.5),R(.5,3),R(-1.5,1.5)),life:R(.4,.9),grow:.6,op:.8,grav:-4})}
@@ -647,7 +647,8 @@ function updateAllies(dt){
 /* ---------- state ---------- */
 let S,firing=false,running=false;let MODE='defend',joy=null,lastMode='defend',fireHeld=false;const P={x:0,z:6,yaw:0,pitch:0,mv:0,bob:0},KEYS={},AT=new Map();const ndc=new THREE.Vector2(0,0),ptr={x:0,y:0};
 const ray=new THREE.Raycaster();
-function clearWorld(){cityCovers.forEach(c=>c.busy=0);coastCovers.forEach(c=>c.busy=0);hillsCovers.forEach(c=>c.busy=0);if(S){for(const j of S.jets||[])scene.remove(j.g);for(const e of S.ents)scene.remove(e.m.g);for(const p of S.proj)scene.remove(p.mesh);for(const c of S.crates||[])scene.remove(c.g)}}
+function clearMarks(){for(const m of DECALS)scene.remove(m);for(const m of SCORCH)scene.remove(m);DECALS.length=0;SCORCH.length=0}
+function clearWorld(){if(typeof DECALS!=='undefined')clearMarks();cityCovers.forEach(c=>c.busy=0);coastCovers.forEach(c=>c.busy=0);hillsCovers.forEach(c=>c.busy=0);if(S){for(const j of S.jets||[])scene.remove(j.g);for(const e of S.ents)scene.remove(e.m.g);for(const p of S.proj)scene.remove(p.mesh);for(const c of S.crates||[])scene.remove(c.g)}}
 function newGame(){clearWorld();S={hp:100,cover:100,wave:0,score:0,ammo:30,reload:0,rockets:30,snAmmo:5,snReload:0,weapon:'rifle',ents:[],proj:[],exposed:0,cd:0,q:[],qt:0,banner:null,shake:0,hurt:0,next:0,kills:0,tanks:0,helis:0,combo:0,comboT:0,pops:[],hitm:0,slow:0,feed:[],killW:'rifle',jets:[],jetT:R(8,16),crates:[],crateT:R(9,14),bosses:0,art:.35,strikes:[],recoil:0,peek:0,stage:1,goal:5,stageTanks:0,stageDone:0,bossPhase:0,stageDelay:0};applyLook(1);nextWave();S.banner={t:3,text:'المرحلة الأولى: دمّر 5 دبابات ثم اهزم القائد'};setWeapon('rifle');updateCover()}
 function nextWave(){S.wave++;const n=3+Math.floor(S.wave*1.5),t=Math.min(8,1+S.wave),q=[];
   for(let i=0;i<n;i++)q.push('s');for(let i=0;i<Math.min(4,1+Math.floor(S.wave/2));i++)q.splice(Math.floor(R(0,q.length)),0,'c');for(let i=0;i<t;i++)q.splice(Math.floor(R(2,q.length)),0,'t');const hc=S.stage>=2?(diff()<1?1:1+Math.floor(S.stage/2)):0;for(let i=0;i<hc;i++)q.splice(Math.floor(R(3,q.length)),0,'h');S.q=q;S.qt=1.5;S.waveAge=0;S.banner={t:2.2,text:'الموجة '+S.wave}}
@@ -678,13 +679,13 @@ function aimRay(spread){const v=ndc.clone();if(spread){v.x+=R(-spread,spread);v.
   if(hits.length&&(hits[0].distance<envD||(hits[0].object.userData.ent&&hits[0].object.userData.ent.cv)))return{ent:hits[0].object.userData.ent,crate:hits[0].object.userData.crate,point:hits[0].point,obj:hits[0].object};
   {let best=null,bd=1e9;const c=new THREE.Vector3();for(const e of S.ents){if(!alive(e)||!e.cv)continue;c.set(e.x,1.3,e.z);const dist=camera.position.distanceTo(c);if(ray.ray.distanceToPoint(c)<Math.max(1.6,dist*.045)&&dist<bd){best=e;bd=dist}}
    if(best){if(eh.length)dust(eh[0].point,6,0x9a9c9c);return{ent:best,point:new THREE.Vector3(best.x,1.4,best.z),obj:best.m.upper,wall:true}}}
-  return{ent:null,point:eh.length?eh[0].point:ray.ray.at(150,new THREE.Vector3())}}
+  return{ent:null,point:eh.length?eh[0].point:ray.ray.at(150,new THREE.Vector3()),normal:eh.length&&eh[0].face?eh[0].face.normal.clone().transformDirection(eh[0].object.matrixWorld):null}}
 function muzzlePos(){return muzzle.getWorldPosition(new THREE.Vector3())}
-function fireRifle(){S.killW='rifle';const h=aimRay(.012);S.ammo--;S.cd=.11;S.exposed=.75;S.recoil=1;sfx('shot');
+function fireRifle(){S.killW='rifle';const h=aimRay(.012);S.ammo--;S.cd=.11;S.exposed=.75;S.recoil=1;sfx('shot');casing();if(Math.random()<.5)particle(muzzlePos(),{color:0x9a958e,size:.12,vel:V(R(-.2,.2),R(.3,.7),R(-.2,.2)),life:.9,grow:2.2,op:.35});
   muzzleFlash.material.opacity=1;tracer(muzzlePos(),h.point,0xffd080);
   if(h.crate){collectCrate(h.crate)}
   else if(h.ent){S.hitm=.14;if(h.wall){S.hitm=.3;kill(h.ent)}else if(h.ent.type==='s'){if(h.obj.userData.part==='head'){h.ent.head=1;S.hitm=.3;kill(h.ent)}else{h.ent.hp--;dust(h.point,3,0x6a6a4a);if(h.ent.hp<=0){S.hitm=.3;kill(h.ent)}}}else{h.ent.hp-=h.ent.type==='b'?(h.obj.userData.part==='officer'?1.2:.3):.35;h.ent.hit=.08;particle(h.point,{color:0xffd27a,size:.3,life:.12,add:1});if(h.ent.hp<=0)kill(h.ent)}}
-  else dust(h.point,4);
+  else{dust(h.point,4);bulletHole(h.point,h.normal)}
   if(S.ammo<=0)startReload()}
 function fireSniper(){S.killW='snp';const h=aimRay(0);S.snAmmo--;S.cd=1.1;S.exposed=.9;S.recoil=2.2;sfx('snp');S.shake=Math.max(S.shake,.15);
   muzzleFlash.material.opacity=1;tracer(muzzlePos(),h.point,0xfff4c0);
@@ -734,7 +735,7 @@ function stageComplete(){running=false;firing=false;S.slow=0;celebrate(10,6);
   document.getElementById('stageTitle').innerHTML='المرحلة '+ordN(S.stage)+' <span>أُنجزت</span>';
   const ng=5*(S.stage+1);document.getElementById('stageText').textContent=`دمّرت ${S.goal} دبابات وهزمت قائد الفرقة. في المرحلة ${ordN(S.stage+1)} «${stageInfo(S.stage+1).name}» عليك تدمير ${ng} دبابة ثم هزيمة القائد، والعدو أقوى.`;
   document.getElementById('stageBtn').textContent='ابدأ المرحلة '+ordN(S.stage+1);document.getElementById('stageOv').hidden=false}
-function nextStage(){P.x=0;P.z=6;P.yaw=0;P.pitch=0;joy=null;AT.clear();for(const e of S.ents)scene.remove(e.m.g);for(const p of S.proj)scene.remove(p.mesh);for(const c of S.crates)scene.remove(c.g);
+function nextStage(){clearMarks();P.x=0;P.z=6;P.yaw=0;P.pitch=0;joy=null;AT.clear();for(const e of S.ents)scene.remove(e.m.g);for(const p of S.proj)scene.remove(p.mesh);for(const c of S.crates)scene.remove(c.g);
   cityCovers.forEach(c=>c.busy=0);coastCovers.forEach(c=>c.busy=0);hillsCovers.forEach(c=>c.busy=0);for(const j of S.jets)scene.remove(j.g);S.jets=[];
   S.ents=[];S.proj=[];S.crates=[];S.strikes=[];S.q=[];S.next=0;S.stage++;S.goal=5*S.stage;S.stageTanks=0;S.stageDone=0;S.bossPhase=0;
   S.hp=100;S.cover=100;updateCover();S.rockets=30;S.ammo=30;S.snAmmo=5;applyLook(S.stage);nextWave();
@@ -769,6 +770,25 @@ function updateFw(dt){for(let i=FWQ.length-1;i>=0;i--){FWQ[i].t-=dt;if(FWQ[i].t<
         particle(p,{color:k%2?f.col:f.col2,size:R(1,1.5),vel:v,life:R(1.4,2.1),grow:-.25,op:1,grav:-4});if(k%3===0)particle(p,{color:k%2?f.col:f.col2,size:R(1.6,2.2),vel:v.clone().multiplyScalar(.97),life:R(.8,1.2),grow:-.4,add:1,op:.7})}
       particle(p,{color:0xffffff,size:4,life:.3,grow:10,add:1});smoke(p,4,.8);const L=boomLights[boomIdx++%3];L.position.copy(p);L.color.setHex(f.col);L.intensity=4;setTimeout(()=>L.color.setHex(0xffa040),300);
       sfx('fwBoom',{pan:panOf(p.x),dist:camera.position.distanceTo(p)})}}}
+/* ---------- realism: debris, casings, bullet holes, scorch, smoke columns ---------- */
+const DEB=[],DECALS=[],SCORCH=[];
+const debGeo=new THREE.BoxGeometry(1,1,1),casGeo=new THREE.CylinderGeometry(.006,.006,.028,6),holeGeo=new THREE.CircleGeometry(.07,10),scGeo=new THREE.CircleGeometry(1,18);
+const casMat=new THREE.MeshLambertMaterial({color:0xc9a040,emissive:0x2a1c00}),holeMat=new THREE.MeshBasicMaterial({color:0x111111,transparent:true,opacity:.85,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}),
+  scMat=new THREE.MeshBasicMaterial({color:0x14100c,transparent:true,opacity:.7,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-3});
+const debMats=[0x6e6a64,0x8a8580,0x5a4e42,0x3a3530].map(c=>mat(c));
+function debris(p,n,scale=1){for(let i=0;i<n;i++){const m=new THREE.Mesh(debGeo,debMats[i%4]);const s=R(.08,.28)*scale;m.scale.set(s*R(.6,1.6),s*R(.5,1),s);m.position.copy(p);scene.add(m);
+  DEB.push({m,vel:V(R(-6,6),R(4,11),R(-6,6)).multiplyScalar(scale*.8+.4),spin:V(R(-9,9),R(-9,9),R(-9,9)),life:R(1.8,3),ground:0})}while(DEB.length>90){scene.remove(DEB.shift().m)}}
+function casing(){const p=camera.localToWorld(V(.22,-.15,-.55)),m=new THREE.Mesh(casGeo,casMat);m.position.copy(p);scene.add(m);
+  const r=V(1,0,0).applyQuaternion(camera.quaternion),u=V(0,1,0).applyQuaternion(camera.quaternion);DEB.push({m,vel:r.multiplyScalar(R(1.6,2.6)).add(u.multiplyScalar(R(1.2,2))),spin:V(R(-20,20),R(-20,20),R(-20,20)),life:1.2,small:1});while(DEB.length>90){scene.remove(DEB.shift().m)}}
+function bulletHole(pt,n){if(!n)return;const m=new THREE.Mesh(holeGeo,holeMat);m.position.copy(pt).addScaledVector(n,.012);m.lookAt(pt.clone().add(n));m.scale.setScalar(R(.7,1.3));scene.add(m);DECALS.push(m);if(DECALS.length>70)scene.remove(DECALS.shift())}
+function scorch(p,r){const gy=typeof groundY==='function'?groundY(p.x,p.z):0;if(p.y-gy>2)return;const m=new THREE.Mesh(scGeo,scMat);m.rotation.x=-Math.PI/2;m.rotation.z=R(0,6);m.position.set(p.x,gy+.03,p.z);m.scale.setScalar(r*R(.8,1.2));scene.add(m);SCORCH.push(m);if(SCORCH.length>30)scene.remove(SCORCH.shift())}
+function updateDebris(dt){for(let i=DEB.length-1;i>=0;i--){const d=DEB[i];d.life-=dt;if(d.life<=0){scene.remove(d.m);DEB.splice(i,1);continue}
+  d.vel.y-=(d.small?9.8:14)*dt;d.m.position.addScaledVector(d.vel,dt);const gy=(typeof groundY==='function'?groundY(d.m.position.x,d.m.position.z):0)+(d.small?.01:.05);
+  if(d.m.position.y<gy){d.m.position.y=gy;d.vel.y*=-.3;d.vel.x*=.55;d.vel.z*=.55;d.spin.multiplyScalar(.5)}d.m.rotation.x+=d.spin.x*dt;d.m.rotation.y+=d.spin.y*dt;d.m.rotation.z+=d.spin.z*dt}}
+const SMOKE_SRC=[[-38,-110],[30,-135],[60,-70],[-62,-55]];let smokeAcc=0;
+function updateSmokeCols(dt){smokeAcc+=dt;if(smokeAcc<.16)return;smokeAcc=0;for(const [x,z] of SMOKE_SRC){if(coast.visible&&x<0)continue;
+  particle(V(x+R(-1.5,1.5),R(2,6),z+R(-1.5,1.5)),{color:Math.random()<.15?0x5a4030:0x3a3633,size:R(4,7),vel:V(R(.6,1.4),R(2.5,4),R(-.3,.3)),life:R(7,10),grow:.22,op:.42});
+  if(Math.random()<.35)particle(V(x,R(.5,2),z),{color:0xff7a20,size:R(2,3.5),vel:V(0,R(1,2),0),life:.6,grow:.4,add:1,op:.7})}}
 function callArtillery(){const h=aimRay(0);if(MODE==='assault'?Math.hypot(h.point.x-P.x,h.point.z-P.z)<10:h.point.z>-4){S.banner={t:1.2,text:'الهدف قريب جداً من موقعك'};return}
   S.art=0;const c=h.point.clone();c.y=.4;
   for(let i=0;i<14;i++)particle(c.clone().add(V(0,.5,0)),{color:0xe03a2a,size:R(.6,1),vel:V(R(-.3,.3),R(1.5,3),R(-.3,.3)),life:2.2,grow:1.2,op:.8});
@@ -776,7 +796,7 @@ function callArtillery(){const h=aimRay(0);if(MODE==='assault'?Math.hypot(h.poin
   S.banner={t:1.6,text:'المدفعية في الطريق!'};setWeapon('rifle')}
 function explode(p,r,own,scale=1,dmg){const d=camera.position.distanceTo(p);sfx('boom',{dist:d,pan:panOf(p.x),big:Math.min(1.5,Math.max(.7,scale))});S.shake=Math.max(S.shake,Math.min(1.2,14/d));
   particle(p,{color:0xffe0a0,size:2*scale,life:.35,grow:10*scale,add:1});particle(p,{color:0xff7a20,size:3*scale,life:.6,grow:6*scale,add:1,op:.9});
-  smoke(p,10,scale);for(let i=0;i<14;i++)particle(p,{color:0xffc060,size:.12,vel:V(R(-8,8),R(2,10),R(-8,8)),life:R(.3,.7),add:1,grav:-14});
+  smoke(p,10,scale);for(let i=0;i<14;i++)particle(p,{color:0xffc060,size:.12,vel:V(R(-8,8),R(2,10),R(-8,8)),life:R(.3,.7),add:1,grav:-14});debris(p,Math.round(8*scale),scale);scorch(p,1.6*scale);
   const L=boomLights[boomIdx++%3];L.position.copy(p).add(V(0,1.5,0));L.intensity=6;
   if(own)for(const e of S.ents){if(!alive(e))continue;const c=V(e.x,e.type==='h'?e.y:e.type==='b'?2:1,e.z),dd=c.distanceTo(p);
     if(e.type==='s'&&dd<r)kill(e);else if(e.type!=='s'&&dd<r+2.5){e.hp-=dmg??(e.type==='h'?18:14);e.hit=.2;if(e.hp<=0)kill(e)}}}
@@ -903,7 +923,7 @@ function updateFx(dt){
   for(let i=tracers.length-1;i>=0;i--){const t=tracers[i];t.t-=dt;if(t.t<=0){scene.remove(t.l);t.l.geometry.dispose();tracers.splice(i,1)}}
   for(const l of boomLights)l.intensity=Math.max(0,l.intensity-dt*14);
   const now=performance.now()/1000;fireLights.forEach((l,i)=>l.intensity=fireBase+Math.sin(now*9+i*2)*.2+Math.random()*.15);
-  muzzleFlash.material.opacity=Math.max(0,muzzleFlash.material.opacity-dt*20);
+  muzzleFlash.material.opacity=Math.max(0,muzzleFlash.material.opacity-dt*20);updateDebris(dt);updateSmokeCols(dt);
   if(coast.visible){seaTex.offset.x+=dt*.012;seaTex.offset.y+=dt*.02;const f=coast.userData.foam;f.position.z=-142.5+Math.sin(performance.now()/1400)*1.2;f.material.opacity=.55+Math.sin(performance.now()/700)*.2}
   const a=flagGeo.attributes.position,arr=a.array;for(let i=0;i<a.count;i++){const x=flagBase[i*3];arr[i*3+2]=reduce?0:Math.sin(x*5+now*5)*.06*(x+.5)}a.needsUpdate=true;
 }
@@ -918,7 +938,7 @@ function updateCamera(dt){
   const up=S&&(S.exposed>0)?1:0;S&&(S.peek+=(up-S.peek)*Math.min(1,dt*12));const peek=S?S.peek:0;
   camera.position.set(baseCam.x,baseCam.y+peek*.18,baseCam.z);
   zoom+=(zoomT-zoom)*Math.min(1,dt*14);const fv=baseFov/zoom;if(Math.abs(camera.fov-fv)>.01){camera.fov=fv;camera.updateProjectionMatrix()}
-  camera.rotation.set((ptr.y*.07-.13)/zoom,-ptr.x*.12/zoom,0,'YXZ');
+  camera.rotation.set((ptr.y*.07-.13)/zoom+(S?S.recoil:0)*.009,-ptr.x*.12/zoom+(S?Math.sin(S.recoil*9)*S.recoil*.003:0),0,'YXZ');
   if(S&&S.shake>0&&!reduce){camera.position.x+=R(-1,1)*S.shake*.12;camera.position.y+=R(-1,1)*S.shake*.12;S.shake=Math.max(0,S.shake-dt*3)}
   gun.rotation.set(ptr.y*.22,-ptr.x*.3,0);gun.position.z=-.42+(S?S.recoil:0)*.05;gun.position.y=-.27+(S?S.recoil:0)*.012+Math.sin(performance.now()/500)*.004}
 
@@ -931,7 +951,7 @@ const ICON={rifle:new Path2D('M2 9.5 13 8.2l2.5-1.4H41V5.6h3.2v1.2H62v2.1H44.5l-
   head:new Path2D('M8 2a6 6 0 0 1 6 6v3l-2 1v3H4v-3l-2-1V8a6 6 0 0 1 6-6zM5 8a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0zM9 8a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0z')};
 const VNAME={s:'جندي',t:'دبابة',h:'مروحية',b:'قائد الفرقة'};
 function drawFeed(){hx.textBaseline='middle';let y=58;const x=VW-12;
-  for(const k of S.feed){const a=Math.min(1,k.t);hx.globalAlpha=a;hx.font='700 14px Tajawal, sans-serif';hx.direction='rtl';
+  for(const k of S.feed){const a=Math.min(1,k.t);hx.globalAlpha=a;hx.font='700 12px Tajawal, sans-serif';hx.direction='rtl';
     const w1=hx.measureText('أنت').width,w2=hx.measureText(k.v).width,iw=40,hw=k.head?20:0,W=w1+w2+iw+hw+34;
     hx.fillStyle='rgba(8,10,12,.6)';hx.beginPath();hx.roundRect(x-W,y-13,W,26,4);hx.fill();if(k.me){hx.strokeStyle='#d33';hx.lineWidth=1.5;hx.stroke()}
     hx.textAlign='right';hx.fillStyle='#5fa8ff';hx.fillText('أنت',x-8,y+1);
@@ -961,8 +981,8 @@ function drawHud(){hx.setTransform(hdpr,0,0,hdpr,0,0);hx.clearRect(0,0,VW,VH);if
     hx.fillStyle='#ffd24a';hx.beginPath();hx.moveTo(sx,sy-14);hx.lineTo(sx+7,sy-7);hx.lineTo(sx,sy);hx.lineTo(sx-7,sy-7);hx.closePath();hx.fill()}
   hx.textAlign='center';hx.direction='ltr';
   for(const q of S.pops){tmp.copy(q.p).project(camera);if(tmp.z>1)continue;const sx=(tmp.x+1)/2*VW,sy=(1-tmp.y)/2*VH;hx.globalAlpha=Math.min(1,q.t*2);
-    hx.font='800 18px Tajawal, sans-serif';hx.lineWidth=3;hx.strokeStyle='rgba(0,0,0,.7)';hx.direction='rtl';hx.strokeText(q.text,sx,sy);hx.fillStyle=q.col;hx.fillText(q.text,sx,sy);hx.globalAlpha=1}
-  if(S.combo>=3){const m=Math.min(3,1+Math.floor((S.combo-1)/3)*.5);hx.direction='rtl';hx.font='800 20px "Reem Kufi", Tajawal, sans-serif';hx.fillStyle='#ffb347';hx.globalAlpha=Math.min(1,S.comboT);
+    hx.font='800 13px Tajawal, sans-serif';hx.lineWidth=2;hx.strokeStyle='rgba(0,0,0,.7)';hx.direction='rtl';hx.strokeText(q.text,sx,sy);hx.fillStyle=q.col;hx.fillText(q.text,sx,sy);hx.globalAlpha=1}
+  if(S.combo>=3){const m=Math.min(3,1+Math.floor((S.combo-1)/3)*.5);hx.direction='rtl';hx.font='800 14px "Reem Kufi", Tajawal, sans-serif';hx.fillStyle='#ffb347';hx.globalAlpha=Math.min(1,S.comboT);
     hx.fillText('سلسلة '+S.combo+' · ×'+m,VW/2,VH-44);hx.globalAlpha=1}
   if(S.hitm>0&&running){const cx=(ndc.x+1)/2*VW,cy=(1-ndc.y)/2*VH,k=S.hitm>.15;hx.strokeStyle=k?'#ff4a3a':'#ffffff';hx.lineWidth=k?3:2;hx.beginPath();
     for(const [a,b] of[[-1,-1],[1,-1],[-1,1],[1,1]]){hx.moveTo(cx+a*6,cy+b*6);hx.lineTo(cx+a*14,cy+b*14)}hx.stroke()}
@@ -994,7 +1014,7 @@ function drawHud(){hx.setTransform(hdpr,0,0,hdpr,0,0);hx.clearRect(0,0,VW,VH);if
   hx.textAlign='right';hx.font='600 16px Rajdhani, "Arial Narrow", sans-serif';hx.fillStyle='rgba(242,242,242,.75)';const sw=small?hx.measureText(small).width+8:0;hx.fillText(small,wr-12,hy+4);
   hx.font='700 32px Rajdhani, "Arial Narrow", sans-serif';hx.fillStyle=low?'#ff5a4a':'#f2f2f2';hx.fillText(big,wr-12-sw,hy+1);
   const ip=ICON[S.weapon==='art'?'art':S.weapon];if(ip){hx.save();hx.translate(wr-ww+10,hy-13);hx.scale(1.25,1.1);hx.fillStyle='#f2f2f2';hx.fill(ip);hx.restore()}
-  if(S.reload>0&&S.weapon==='rifle'||S.snReload>0&&S.weapon==='snp'){hx.direction='rtl';hx.textAlign='center';hx.font='700 15px Tajawal, sans-serif';hx.fillStyle='#f2f2f2';hx.fillText('إعادة تلقيم...',VW/2,VH*.62);hx.direction='ltr'}
+  if(S.reload>0&&S.weapon==='rifle'||S.snReload>0&&S.weapon==='snp'){hx.direction='rtl';hx.textAlign='center';hx.font='700 12px Tajawal, sans-serif';hx.fillStyle='#f2f2f2';hx.fillText('إعادة تلقيم...',VW/2,VH*.62);hx.direction='ltr'}
   // top-center round bar
   const alive2=S.ents.filter(e=>alive(e)).length+S.q.length,tw2=Math.min(300,VW*.44),tx=VW/2-tw2/2;
   hx.fillStyle='rgba(8,10,12,.55)';hx.beginPath();hx.roundRect(tx,6,tw2,34,5);hx.fill();
@@ -1005,9 +1025,9 @@ function drawHud(){hx.setTransform(hdpr,0,0,hdpr,0,0);hx.clearRect(0,0,VW,VH);if
   hx.textBaseline='alphabetic';hx.direction='ltr';
   const boss=S.ents.find(e=>e.type==='b'&&alive(e));
   if(boss){const bw2=Math.min(420,VW*.5),bx=(VW-bw2)/2,by=80;hx.fillStyle='rgba(0,0,0,.6)';hx.fillRect(bx,by,bw2,12);hx.fillStyle='#c8412f';hx.fillRect(bx+bw2*(1-boss.hp/boss.max),by,bw2*boss.hp/boss.max,12);
-    hx.direction='rtl';hx.textAlign='center';hx.font='700 15px "Reem Kufi", Tajawal, sans-serif';hx.fillStyle='#efe4cf';hx.fillText('قائد الفرقة',VW/2,by+30);hx.font='800 16px Tajawal, sans-serif';hx.lineWidth=4;hx.strokeStyle='rgba(20,14,10,.75)';hx.strokeText('ارمه بالمدفعية!',VW/2,by+52);hx.fillStyle=S.art>=1?'#ffb347':'#efe4cf';hx.fillText('ارمه بالمدفعية!',VW/2,by+52);hx.direction='ltr'}
+    hx.direction='rtl';hx.textAlign='center';hx.font='700 12px "Reem Kufi", Tajawal, sans-serif';hx.fillStyle='#efe4cf';hx.fillText('قائد الفرقة',VW/2,by+25);hx.font='800 12px Tajawal, sans-serif';hx.lineWidth=3;hx.strokeStyle='rgba(20,14,10,.75)';hx.strokeText('ارمه بالمدفعية!',VW/2,by+41);hx.fillStyle=S.art>=1?'#ffb347':'#efe4cf';hx.fillText('ارمه بالمدفعية!',VW/2,by+41);hx.direction='ltr'}
   hx.direction='rtl';
-  if(S.banner){hx.globalAlpha=Math.min(1,S.banner.t*2);hx.textAlign='center';hx.font='700 clamp(22px,4vw,38px) "Reem Kufi", Tajawal, sans-serif';hx.font=`700 ${Math.max(22,Math.min(38,VW/25))}px "Reem Kufi", Tajawal, sans-serif`;hx.lineWidth=5;hx.strokeStyle='rgba(20,14,10,.75)';hx.strokeText(S.banner.text,VW/2,VH*.36);hx.fillStyle='#fff4e0';hx.fillText(S.banner.text,VW/2,VH*.36);hx.globalAlpha=1}
+  if(S.banner){hx.globalAlpha=Math.min(1,S.banner.t*2);hx.textAlign='center';hx.font=`700 ${Math.max(14,Math.min(21,VW/42))}px "Reem Kufi", Tajawal, sans-serif`;hx.lineWidth=3;hx.strokeStyle='rgba(20,14,10,.75)';hx.strokeText(S.banner.text,VW/2,VH*.3);hx.fillStyle='#fff4e0';hx.fillText(S.banner.text,VW/2,VH*.3);hx.globalAlpha=1}
   if(S.weapon==='snp'&&running){const cx=(ndc.x+1)/2*VW,cy=(1-ndc.y)/2*VH,r=Math.min(VW,VH)*.44;hx.fillStyle='rgba(0,0,0,.9)';hx.beginPath();hx.rect(0,0,VW,VH);hx.arc(cx,cy,r,0,Math.PI*2,true);hx.fill('evenodd');
     hx.strokeStyle='#111';hx.lineWidth=6;hx.beginPath();hx.arc(cx,cy,r,0,7);hx.stroke();hx.strokeStyle='rgba(10,10,10,.85)';hx.lineWidth=1.5;hx.beginPath();hx.moveTo(cx-r,cy);hx.lineTo(cx-8,cy);hx.moveTo(cx+8,cy);hx.lineTo(cx+r,cy);hx.moveTo(cx,cy-r);hx.lineTo(cx,cy-8);hx.moveTo(cx,cy+8);hx.lineTo(cx,cy+r);hx.stroke();
     hx.lineWidth=4;hx.beginPath();hx.moveTo(cx-r,cy);hx.lineTo(cx-r*.55,cy);hx.moveTo(cx+r*.55,cy);hx.lineTo(cx+r,cy);hx.moveTo(cx,cy+r*.55);hx.lineTo(cx,cy+r);hx.stroke();hx.fillStyle='#e0412c';hx.beginPath();hx.arc(cx,cy,2.2,0,7);hx.fill()}
