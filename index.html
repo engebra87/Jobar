@@ -116,6 +116,7 @@ body{background:var(--night);color:var(--dust);font-family:var(--body);padding-i
       <button id="sMute" type="button" class="sec"></button>
       <button id="sGfx" type="button" class="sec"></button>
       <button id="sShake" type="button" class="sec"></button>
+      <button id="sToon" type="button" class="sec"></button>
       <button id="sBack" type="button">رجوع</button>
     </div>
   </div>
@@ -741,7 +742,7 @@ function fireSniper(){S.killW='snp';const h=aimRay(0);S.snAmmo--;S.cd=1.1;S.expo
     else{e.hp-=(e.type==='b'?(h.obj.userData.part==='officer'?10:1.5):e.type==='h'?3:2.5)*W().snVeh;e.hit=.15;particle(h.point,{color:0xffd27a,size:.5,life:.15,add:1});if(e.hp<=0)kill(e)}}
   else dust(h.point,6);
   if(S.snAmmo<=0){S.snReload=2;sfx('reload',{delay:.5})}}
-function rapidRpg(){return coast.visible}
+function rapidRpg(){return ((S&&S.stage)||1)>=3}
 function fireRpg(){if(S.rockets<=0){S.banner={t:1,text:'نفدت القذائف'};return}
   const h=aimRay(0),from=muzzlePos(),dir=h.point.clone().sub(from).normalize();
   S.rockets--;S.cd=rapidRpg()?.22:1;S.exposed=1.1;S.recoil=rapidRpg()?1:1.6;sfx('rpg');muzzleFlash.material.opacity=1;
@@ -774,7 +775,7 @@ const LOOKS=[
  {sky:['#3a7ac6','#86b8e2','#d6e5ee','#d4cfc2','#aea088'],fog:0xd2dce2,near:110,far:330,hs:0xe6eef8,hg:0x62523e,hi:.7,sc:0xfff2de,si:1.15,fire:.6,name:'نهار'},
  {sky:['#2f78c8','#7fb6e4','#d4e8f2','#e0e8e4','#cbbd9a'],fog:0xcfe2ec,near:120,far:340,hs:0xe8f0fa,hg:0x7a6a4c,hi:.72,sc:0xfff4e0,si:1.2,fire:.4}];
 function stageInfo(n){if(n===1)return{look:0,world:'city',name:'معركة جوبر'};if(n%2===0)return{look:1,world:'hills',name:'معركة إدلب'};return{look:2,world:'coast',name:'معركة الساحل'}}
-function applyLook(n){const I=stageInfo(n),L=LOOKS[I.look];setWorld(I.world);const c=skyTex.image,g=c.getContext('2d'),gr=g.createLinearGradient(0,0,0,c.height);
+function applyLook(n){const I=stageInfo(n),L0=LOOKS[I.look];let TN=false;try{TN=SET.toon}catch(e){}const L=TN?Object.assign({},L0,{sky:['#1f7fff','#4fa8ff','#aee0ff',L0.sky[3],L0.sky[4]],fog:0xbfe2ff,far:L0.far*1.25,hi:L0.hi*1.15,si:L0.si*1.1}):L0;setWorld(I.world);const c=skyTex.image,g=c.getContext('2d'),gr=g.createLinearGradient(0,0,0,c.height);
   gr.addColorStop(0,L.sky[0]);gr.addColorStop(.3,L.sky[1]);gr.addColorStop(.48,L.sky[2]);gr.addColorStop(.52,L.sky[3]);gr.addColorStop(1,L.sky[4]);g.fillStyle=gr;g.fillRect(0,0,c.width,c.height);skyTex.needsUpdate=true;
   scene.fog.color.setHex(L.fog);scene.fog.near=L.near;scene.fog.far=L.far;hemi.color.setHex(L.hs);hemi.groundColor.setHex(L.hg);hemi.intensity=L.hi;sun.color.setHex(L.sc);sun.intensity=L.si;fireBase=L.fire}
 function stageComplete(){running=false;firing=false;S.slow=0;celebrate(10,6);
@@ -845,19 +846,33 @@ function AM(){return 1/(1+(((S&&S.stage)||1)-1)*.12)}
 function stageMul(){return 1+(((S&&S.stage)||1)-1)*.1}
 function setTierVis(){const t=tierOf(S&&S.stage);tierG1.visible=t===1;tierG2.visible=t===2}
 /* ---------- settings & pause menu ---------- */
-const SET={mute:false,gfx:'high',shake:true};try{Object.assign(SET,JSON.parse(localStorage.getItem('jobar-settings')||'{}'))}catch(e){}
+const SET={mute:false,gfx:'high',shake:true,toon:true};try{Object.assign(SET,JSON.parse(localStorage.getItem('jobar-settings')||'{}'))}catch(e){}
 function saveSet(){try{localStorage.setItem('jobar-settings',JSON.stringify(SET))}catch(e){}}
-function applySettings(){renderer.setPixelRatio(SET.gfx==='low'?1:Math.min(devicePixelRatio||1,2));sun.castShadow=SET.gfx!=='low';resize();
+function applySettings(){renderer.setPixelRatio(SET.gfx==='low'?1:Math.min(devicePixelRatio||1,2));sun.castShadow=SET.gfx!=='low';resize();if(SET.toon!==toonOn)toonify(SET.toon);
   if(typeof AU!=='undefined'&&AU)AU.master.gain.value=SET.mute?0:.9;
   const L={mute:SET.mute?'إيقاف':'تشغيل',gfx:SET.gfx==='low'?'منخفضة (أسرع)':'عالية',shake:SET.shake?'تشغيل':'إيقاف'};
-  document.getElementById('sMute').textContent='الصوت: '+L.mute;document.getElementById('sGfx').textContent='جودة الرسوميات: '+L.gfx;document.getElementById('sShake').textContent='اهتزاز الشاشة: '+L.shake}
+  document.getElementById('sMute').textContent='الصوت: '+L.mute;document.getElementById('sGfx').textContent='جودة الرسوميات: '+L.gfx;document.getElementById('sShake').textContent='اهتزاز الشاشة: '+L.shake;document.getElementById('sToon').textContent='الألوان: '+(SET.toon?'كرتون':'واقعية')}
+
+const TOON_GRAD=(()=>{const d=new Uint8Array([105,105,105,255,185,185,185,255,255,255,255,255]);const t=new THREE.DataTexture(d,3,1,THREE.RGBAFormat);t.minFilter=t.magFilter=THREE.NearestFilter;t.generateMipmaps=false;t.needsUpdate=true;return t})();
+const toonMap=new WeakMap();
+function toonOf(m){if(m.userData&&m.userData.toonSrc)return m;let t=toonMap.get(m);if(t)return t;
+  t=new THREE.MeshToonMaterial({color:m.color.clone(),map:m.map||null,gradientMap:TOON_GRAD,transparent:m.transparent,opacity:m.opacity,side:m.side,alphaTest:m.alphaTest,vertexColors:m.vertexColors,depthWrite:m.depthWrite,emissive:m.emissive?m.emissive.clone():new THREE.Color(0),emissiveIntensity:m.emissiveIntensity||1});
+  t.color.offsetHSL(0,.12,.04);t.userData.toonSrc=m;toonMap.set(m,t);return t}
+function toonSwap(m,on){if(Array.isArray(m))return m.map(x=>toonSwap(x,on));if(!m)return m;
+  if(on){if(m.isMeshLambertMaterial||m.isMeshPhongMaterial){const t=toonOf(m);if(t.map!==m.map){t.map=m.map;t.needsUpdate=true}t.opacity=m.opacity;t.visible=m.visible;return t}return m}
+  if(m.userData&&m.userData.toonSrc){const o=m.userData.toonSrc;if(o.map!==m.map){o.map=m.map;o.needsUpdate=true}return o}return m}
+function toonify(on){scene.traverse(o=>{if(o.isMesh&&!o.isSprite){const n=toonSwap(o.material,on);if(n!==o.material)o.material=n}});
+  renderer.toneMapping=on?THREE.NoToneMapping:THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=on?1:1.08;glc.style.filter=on?'saturate(1.55) contrast(1.06) brightness(1.04)':'';toonOn=on;if(S)applyLook(S.stage)}
+let toonOn=false,toonT=0;
+function toonTick(dt){if(!SET.toon)return;toonT-=dt;if(toonT>0)return;toonT=.4;scene.traverse(o=>{if(o.isMesh&&(o.material.isMeshLambertMaterial||o.material.isMeshPhongMaterial||Array.isArray(o.material)))o.material=toonSwap(o.material,true)})}
 let paused=false;
 function pauseGame(){if(!running||!S)return;paused=true;running=false;firing=false;document.getElementById('pauseOv').hidden=false;document.getElementById('setPanel').hidden=true;document.getElementById('menuMain').hidden=false;if(ac&&ac.state==='running')ac.suspend?.()}
 function resumeGame(){if(!paused)return;paused=false;document.getElementById('pauseOv').hidden=true;running=true;if(ac)ac.resume?.()}
-function exitGame(){paused=false;running=false;firing=false;document.getElementById('pauseOv').hidden=true;if(ac)ac.resume?.();
-  if(window.Android&&Android.exit){Android.exit();return}document.getElementById('start').hidden=false}
-window.onAndroidBack=()=>{if(paused)resumeGame();else if(running)pauseGame();else if(window.Android&&Android.exit)Android.exit()};
-document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseGame()});
+function exitGame(){paused=false;running=false;firing=false;document.getElementById('pauseOv').hidden=true;
+  if(window.Android&&Android.exit){try{AU&&(AU.master.gain.value=0);ac&&ac.close?.()}catch(e){}Android.exit();return}if(ac)ac.resume?.();document.getElementById('start').hidden=false}
+window.onAndroidBack=()=>{if(paused)resumeGame();else if(running)pauseGame();else exitGame()};
+document.addEventListener('visibilitychange',()=>{if(document.hidden){pauseGame();if(ac&&ac.state==='running')ac.suspend?.()}});
+window.onAndroidPause=()=>{pauseGame();if(ac&&ac.state==='running')ac.suspend?.()};
 function callArtillery(){const h=aimRay(0);if(MODE==='assault'?Math.hypot(h.point.x-P.x,h.point.z-P.z)<10:h.point.z>-4){S.banner={t:1.2,text:'الهدف قريب جداً من موقعك'};return}
   S.art=0;const c=h.point.clone();c.y=.4;
   for(let i=0;i<14;i++)particle(c.clone().add(V(0,.5,0)),{color:0xe03a2a,size:R(.6,1),vel:V(R(-.3,.3),R(1.5,3),R(-.3,.3)),life:2.2,grow:1.2,op:.8});
@@ -1207,7 +1222,7 @@ function drawJoy(){if(MODE!=='assault'||!running)return;  const bx=joy?joy.sx:VW
   if(!joy){hx.fillStyle='rgba(255,255,255,.8)';hx.font='700 12px Tajawal, sans-serif';hx.textAlign='center';hx.direction='rtl';hx.fillText('حرّك',bx,by+72);hx.direction='ltr'}hx.globalAlpha=1}
 /* ---------- loop ---------- */
 let last=performance.now();
-function loop(now){const rdt=Math.min(.05,(now-last)/1000);last=now;let dt=rdt;if(S&&S.slow>0&&running){S.slow-=rdt;if(!reduce)dt=rdt*.35}if(running)update(dt);if(S)ambientTick();updateAllies(dt);updateFw(rdt);updateFx(rdt>dt?rdt:dt);updateCamera(dt);
+function loop(now){const rdt=Math.min(.05,(now-last)/1000);last=now;let dt=rdt;if(S&&S.slow>0&&running){S.slow-=rdt;if(!reduce)dt=rdt*.35}if(running)update(dt);if(S)ambientTick();updateAllies(dt);updateFw(rdt);updateFx(rdt>dt?rdt:dt);updateCamera(dt);toonTick(rdt);
   if(!running&&S)for(const e of S.ents){if(e.type==='t')e.m.turret.rotation.y=Math.sin(now/1500)*.3;if(e.type==='h'){e.m.rotor.rotation.y+=.4;e.m.g.position.x=Math.sin(now/2200)*4}}
   renderer.render(scene,camera);drawHud();requestAnimationFrame(loop)}
 
@@ -1237,7 +1252,7 @@ function gameOver(){running=false;firing=false;document.getElementById('final').
 document.getElementById('stageBtn').onclick=()=>S&&nextStage();
 {const $=id=>document.getElementById(id);$('pauseBtn').onclick=pauseGame;$('mResume').onclick=resumeGame;$('mRestartStage').onclick=()=>{const st=S.stage;begin(st)};$('mRestartGame').onclick=()=>begin(1);
   $('mSettings').onclick=()=>{$('menuMain').hidden=true;$('setPanel').hidden=false;applySettings()};$('sBack').onclick=()=>{$('menuMain').hidden=false;$('setPanel').hidden=true};
-  $('sMute').onclick=()=>{SET.mute=!SET.mute;saveSet();applySettings()};$('sGfx').onclick=()=>{SET.gfx=SET.gfx==='low'?'high':'low';saveSet();applySettings()};$('sShake').onclick=()=>{SET.shake=!SET.shake;saveSet();applySettings()};$('mExit').onclick=exitGame;
+  $('sMute').onclick=()=>{SET.mute=!SET.mute;saveSet();applySettings()};$('sGfx').onclick=()=>{SET.gfx=SET.gfx==='low'?'high':'low';saveSet();applySettings()};$('sShake').onclick=()=>{SET.shake=!SET.shake;saveSet();applySettings()};$('mExit').onclick=exitGame;$('sToon').onclick=()=>{SET.toon=!SET.toon;saveSet();applySettings()};
   setInterval(()=>{$('pauseBtn').hidden=!running},250);setTimeout(applySettings,0)}document.getElementById('go').onclick=()=>begin(1);document.getElementById('again').onclick=()=>begin(1);
 {const fb=document.getElementById('fireBtn');let fl0=null;fb.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();fb.setPointerCapture?.(e.pointerId);fireHeld=true;fl0=localPt(e);if(running)firing=true});fb.addEventListener('pointermove',e=>{if(!fireHeld||!fl0)return;const l=localPt(e);lookBy(l.x-fl0.x,l.y-fl0.y);fl0=l});const fu=e=>{fireHeld=false;fl0=null;firing=false};fb.addEventListener('pointerup',fu);fb.addEventListener('pointercancel',fu);fb.addEventListener('lostpointercapture',fu)}
 addEventListener('keydown',e=>{KEYS[e.key.toLowerCase()]=1;if(MODE==='assault'&&e.key===' '&&running){firing=true;e.preventDefault()}});addEventListener('keyup',e=>{KEYS[e.key.toLowerCase()]=0;if(MODE==='assault'&&e.key===' ')firing=false});

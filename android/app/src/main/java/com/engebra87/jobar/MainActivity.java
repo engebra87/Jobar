@@ -45,12 +45,13 @@ public class MainActivity extends Activity {
     }
 
     @Override public void onWindowFocusChanged(boolean f) { super.onWindowFocusChanged(f); if (f) hideBars(); }
-    @Override protected void onPause() { super.onPause(); web.onPause(); }
-    @Override protected void onResume() { super.onResume(); web.onResume(); }
+    @Override protected void onPause() { web.evaluateJavascript("window.onAndroidPause&&onAndroidPause()", null); web.onPause(); web.pauseTimers(); super.onPause(); }
+    @Override protected void onResume() { super.onResume(); web.resumeTimers(); web.onResume(); }
+    @Override protected void onDestroy() { if (web != null) { web.loadUrl("about:blank"); web.destroy(); } super.onDestroy(); if (isFinishing()) android.os.Process.killProcess(android.os.Process.myPid()); }
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); web.saveState(out); }
     public class Bridge {
         @JavascriptInterface public void exit() {
-            runOnUiThread(new Runnable() { public void run() { finishAndRemoveTask(); } });
+            runOnUiThread(new Runnable() { public void run() { web.onPause(); finishAndRemoveTask(); } });
         }
     }
 
