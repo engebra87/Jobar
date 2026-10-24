@@ -706,7 +706,7 @@ function clearMarks(){for(const m of DECALS)scene.remove(m);for(const m of SCORC
 function clearWorld(){if(typeof DECALS!=='undefined')clearMarks();cityCovers.forEach(c=>c.busy=0);coastCovers.forEach(c=>c.busy=0);hillsCovers.forEach(c=>c.busy=0);if(S){for(const j of S.jets||[])scene.remove(j.g);for(const e of S.ents)scene.remove(e.m.g);for(const p of S.proj)scene.remove(p.mesh);for(const c of S.crates||[])scene.remove(c.g)}}
 function newGame(){clearWorld();S={hp:100,cover:100,wave:0,score:0,ammo:30,reload:0,rockets:30,snAmmo:5,snReload:0,weapon:'rifle',ents:[],proj:[],exposed:0,cd:0,q:[],qt:0,banner:null,shake:0,hurt:0,next:0,kills:0,tanks:0,helis:0,combo:0,comboT:0,pops:[],hitm:0,slow:0,feed:[],killW:'rifle',jets:[],jetT:R(8,16),crates:[],crateT:R(9,14),bosses:0,art:.35,strikes:[],recoil:0,peek:0,stage:1,goal:5,stageTanks:0,stageDone:0,bossPhase:0,stageDelay:0};applyLook(1);nextWave();S.banner={t:3,text:'المرحلة الأولى: دمّر 5 دبابات أو مروحيات ثم اهزم القائد'};setWeapon('rifle');updateCover()}
 function nextWave(){S.wave++;const n=3+Math.floor(S.wave*1.5),t=Math.min(8,1+S.wave),q=[];
-  for(let i=0;i<n;i++)q.push('s');for(let i=0;i<Math.min(4,1+Math.floor(S.wave/2));i++)q.splice(Math.floor(R(0,q.length)),0,'c');for(let i=0;i<t;i++)q.splice(Math.floor(R(2,q.length)),0,'t');const hc=S.stage>=2?(diff()<1?1:1+Math.floor(S.stage/2)):0;for(let i=0;i<hc;i++)q.splice(Math.floor(R(3,q.length)),0,'h');S.q=q;S.qt=1.5;S.waveAge=0;S.banner={t:2.2,text:'الموجة '+S.wave}}
+  for(let i=0;i<n;i++)q.push('s');for(let i=0;i<Math.min(4,1+Math.floor(S.wave/2));i++)q.splice(Math.floor(R(0,q.length)),0,'c');for(let i=0;i<t;i++)q.splice(Math.floor(R(2,q.length)),0,'t');const hc=S.stage>=2?(diff()<1?1:1+Math.floor(S.stage/2)):0;for(let i=0;i<hc;i++)q.splice(Math.floor(R(3,q.length)),0,'h');S.q=q;S.qt=1.5;S.waveAge=0}
 function spawn(type){
   if(type==='c'&&MODE==='assault')type='s';
   if(type==='c'){const list=(coast.visible?coastCovers:hills.visible?hillsCovers:cityCovers).filter(c=>!c.busy&&c.h>=5&&c.z>-62&&c.z<-2);if(!list.length){type='s'}else{
@@ -1151,7 +1151,7 @@ function drawHud(){hx.setTransform(hdpr,0,0,hdpr,0,0);hx.clearRect(0,0,VW,VH);if
   hx.fillStyle='#5fa8ff';hx.fillRect(tx,6,4,34);hx.fillStyle='#e8a94a';hx.fillRect(tx+tw2-4,6,4,34);
   hx.textAlign='center';hx.font='700 22px Rajdhani, "Arial Narrow", sans-serif';hx.fillStyle='#5fa8ff';hx.fillText(Math.min(S.stageTanks,S.goal)+'/'+S.goal,tx+34,24);
   hx.fillStyle='#e8a94a';hx.fillText(alive2,tx+tw2-30,24);
-  hx.direction='rtl';hx.font='700 13px Tajawal, sans-serif';hx.fillStyle='#f2f2f2';hx.fillText(S.bossPhase?'اهزم القائد':'المرحلة '+S.stage+' · الموجة '+S.wave,VW/2,24);
+  hx.direction='rtl';hx.font='700 13px Tajawal, sans-serif';hx.fillStyle='#f2f2f2';hx.fillText(S.bossPhase?'اهزم القائد':'المرحلة '+S.stage+' · '+stageInfo(S.stage).name,VW/2,24);
   hx.textBaseline='alphabetic';hx.direction='ltr';
   const boss=S.ents.find(e=>e.type==='b'&&alive(e));
   if(boss){const bw2=Math.min(420,VW*.5),bx=(VW-bw2)/2,by=80;hx.fillStyle='rgba(0,0,0,.6)';hx.fillRect(bx,by,bw2,12);hx.fillStyle='#c8412f';hx.fillRect(bx+bw2*(1-boss.hp/boss.max),by,bw2*boss.hp/boss.max,12);
@@ -1293,7 +1293,7 @@ function begin(n,mode='defend'){paused=false;document.getElementById('pauseOv').
   setMode(mode);newGame();setTierVis();running=true;document.getElementById('start').hidden=true;document.getElementById('over').hidden=true;document.getElementById('stageOv').hidden=true;
   if(n>1){S.stage=n-1;S.wave=0;nextStage()}}
 document.querySelectorAll('[data-stage]').forEach(b=>b.onclick=()=>begin(+b.dataset.stage));
-function gameOver(){running=false;firing=false;document.getElementById('final').textContent=`المرحلة ${S.stage} · النقاط ${S.score} · الموجة ${S.wave} · جنود ${S.kills} · دبابات ${S.tanks} · مروحيات ${S.helis} · قادة ${S.bosses}`;document.getElementById('over').hidden=false;
+function gameOver(){running=false;firing=false;document.getElementById('final').textContent=`المرحلة ${S.stage} · النقاط ${S.score} · جنود ${S.kills} · دبابات ${S.tanks} · مروحيات ${S.helis} · قادة ${S.bosses}`;document.getElementById('over').hidden=false;
   const nb=S.score>best;if(nb){best=S.score;try{localStorage.setItem('somoud-best',best)}catch(e){}}document.getElementById('bestOver').textContent=nb?'رقم قياسي جديد!':'أفضل نتيجة: '+best;showBest()}
 document.getElementById('stageBtn').onclick=()=>S&&nextStage();
 {const $=id=>document.getElementById(id);$('pauseBtn').onclick=pauseGame;$('mResume').onclick=resumeGame;$('mRestartStage').onclick=()=>{const st=S.stage;begin(st)};$('mRestartGame').onclick=()=>begin(1);
