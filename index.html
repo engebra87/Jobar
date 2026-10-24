@@ -601,6 +601,10 @@ function audioInit(){if(AU||!ac)return;const sr=ac.sampleRate;
   AU.nextDistant=ac.currentTime+R(2,5)}
 function out(dry,wetAmt,pan){const g=ac.createGain();g.gain.value=dry;let node=g;if(pan&&ac.createStereoPanner){const p=ac.createStereoPanner();p.pan.value=Math.max(-1,Math.min(1,pan));g.connect(p);node=p}
   node.connect(AU.master);if(wetAmt){const s=ac.createGain();s.gain.value=wetAmt;node.connect(s).connect(AU.verb)}return g}
+function celBus(){if(!AU.cel){const b=ac.createGain();b.connect(AU.master);const w=ac.createGain();w.gain.value=.45;b.connect(w).connect(AU.verb);AU.cel=b}return AU.cel}
+function outC(dry,pan){const g=ac.createGain();g.gain.value=dry;let node=g;if(pan&&ac.createStereoPanner){const p=ac.createStereoPanner();p.pan.value=Math.max(-1,Math.min(1,pan));g.connect(p);node=p}node.connect(celBus());return g}
+function stopCelebration(){FWQ.length=0;for(const f of FW){scene.remove(f.s);f.s.material.dispose()}FW.length=0;
+  if(typeof AU!=='undefined'&&AU&&AU.cel){const b=AU.cel,t=ac.currentTime;AU.cel=null;try{b.gain.cancelScheduledValues(t);b.gain.setValueAtTime(b.gain.value,t);b.gain.linearRampToValueAtTime(0,t+.25);setTimeout(()=>{try{b.disconnect()}catch(e){}},400)}catch(e){}}}
 function noiseHit(t,dur,type,f0,f1,q,gain,dest,buf){const s=ac.createBufferSource();s.buffer=buf||AU.nb;const f=ac.createBiquadFilter();f.type=type;f.Q.value=q||.7;f.frequency.setValueAtTime(f0,t);if(f1)f.frequency.exponentialRampToValueAtTime(f1,t+dur);
   const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+.002);g.gain.exponentialRampToValueAtTime(.0008,t+dur);s.connect(f).connect(g).connect(dest);s.start(t,R(0,1.5));s.stop(t+dur+.05)}
 function thump(t,f0,f1,dur,gain,dest,type='sine'){const o=ac.createOscillator();o.type=type;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dur);const g=ac.createGain();g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(.0008,t+dur);o.connect(g).connect(dest);o.start(t);o.stop(t+dur+.05)}
@@ -645,8 +649,17 @@ function sfx(kind,opt={}){if(!ac||SET.mute)return;try{audioInit();const t=ac.cur
     let node=g;if(ac.createStereoPanner){const p=ac.createStereoPanner();p.pan.setValueAtTime(-(opt.dir||1)*.9,t);p.pan.linearRampToValueAtTime((opt.dir||1)*.9,t+dur);g.connect(p);node=p}
     node.connect(AU.master);const sw=ac.createGain();sw.gain.value=.4;node.connect(sw).connect(AU.verb);
     s2.connect(f).connect(g);hs.connect(hf).connect(hg).connect(g);s2.start(t);hs.start(t);s2.stop(t+dur);hs.stop(t+dur)}
-  else if(kind==='fwUp'){const d=out(.35,.3,pan),o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.setValueAtTime(700,t);o.frequency.exponentialRampToValueAtTime(2400,t+1);g.gain.setValueAtTime(.12,t);g.gain.linearRampToValueAtTime(0,t+1.1);o.connect(g).connect(d);o.start(t);o.stop(t+1.15);noiseHit(t,1,'bandpass',900,2600,2,.35,d)}
-  else if(kind==='fwBoom'){const dist=opt.dist??40,d=out(Math.max(.3,1-dist/120),.8,pan);thump(t,90,35,.5,.9,d);noiseHit(t,.4,'lowpass',3000,300,.7,.8,d);for(let i=0;i<14;i++)noiseHit(t+R(.3,1.4),R(.01,.025),'highpass',R(3000,6000),0,.7,R(.1,.3),d)}
+  else if(kind==='fwUp'){const d=outC(.5,pan),n=ac.createBufferSource();n.buffer=AU.nb;const f=ac.createBiquadFilter();f.type='bandpass';f.Q.value=2.5;f.frequency.setValueAtTime(500,t);f.frequency.exponentialRampToValueAtTime(3200,t+1);
+    const g=ac.createGain();g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.45,t+.15);g.gain.exponentialRampToValueAtTime(.05,t+1);g.gain.linearRampToValueAtTime(0,t+1.1);n.connect(f).connect(g).connect(d);n.start(t,R(0,1.5));n.stop(t+1.15);
+    for(let i=0;i<8;i++)noiseHit(t+R(.05,.9),.008,'highpass',6000,0,.7,R(.05,.12),d)}
+  else if(kind==='fwBoom'){const dist=opt.dist??40,v=Math.max(.35,1-dist/120),d=outC(v,pan);
+    noiseHit(t,.025,'highpass',2500,0,.7,1,d);thump(t,85,30,.7,1.2,d);noiseHit(t,.6,'lowpass',2600,200,.7,.9,d);noiseHit(t,1.2,'lowpass',500,70,.7,.6,d,AU.bb);
+    const n=Math.floor(R(18,34)),t0=t+R(.35,.6);for(let i=0;i<n;i++)noiseHit(t0+Math.pow(Math.random(),1.4)*1.6,R(.005,.014),'highpass',R(4500,8000),0,.7,R(.12,.4)*v,d)}
+  else if(kind==='victory'){const d=outC(.55,0),N=[[392,0,.2],[523.25,.18,.2],[659.25,.36,.2],[783.99,.54,1.5],[523.25,.54,1.5],[659.25,.54,1.5]];
+    for(const[fq,dt,len]of N){const tt=t+dt,g=ac.createGain(),lp=ac.createBiquadFilter();lp.type='lowpass';lp.Q.value=2;lp.frequency.setValueAtTime(700,tt);lp.frequency.linearRampToValueAtTime(3200,tt+.06);lp.frequency.exponentialRampToValueAtTime(1400,tt+len);
+      g.gain.setValueAtTime(.001,tt);g.gain.exponentialRampToValueAtTime(.22,tt+.03);g.gain.setValueAtTime(.2,tt+len*.7);g.gain.exponentialRampToValueAtTime(.001,tt+len);lp.connect(g).connect(d);
+      for(const det of[-6,5]){const o=ac.createOscillator();o.type='sawtooth';o.frequency.value=fq;o.detune.value=det;o.connect(lp);o.start(tt);o.stop(tt+len+.05)}}
+    thump(t+.54,110,55,.5,.6,d);for(let i=0;i<10;i++)noiseHit(t+.54+i*.05,.04,'bandpass',2200,0,1.2,.18*(1-i/10),d)}
   else if(kind==='distant'){const d=out(R(.06,.14),1,R(-1,1));const n=Math.floor(R(3,9));for(let i=0;i<n;i++){const tt=t+i*R(.09,.14);noiseHit(tt,.09,'lowpass',1100,350,.7,.9,d);thump(tt,90,50,.06,.4,d)}}
   else if(kind==='distantBoom'){const d=out(R(.12,.25),1,R(-1,1));thump(t,55,22,1.5,1,d);noiseHit(t,1.8,'lowpass',500,80,.7,1,d,AU.bb)}
 }catch(e){}}
@@ -794,7 +807,7 @@ function stageComplete(){running=false;firing=false;S.slow=0;celebrate(10,6);
   document.getElementById('stageTitle').innerHTML='المرحلة '+ordN(S.stage)+' <span>أُنجزت</span>';
   const ng=5*(S.stage+1);document.getElementById('stageText').textContent=`دمّرت ${S.goal} دبابة ومروحية وهزمت قائد الفرقة. في المرحلة ${ordN(S.stage+1)} «${stageInfo(S.stage+1).name}» عليك تدمير ${ng} دبابة أو مروحية (يُحسبان معاً) ثم هزيمة القائد، والعدو أقوى.`;
   document.getElementById('stageBtn').textContent='ابدأ المرحلة '+ordN(S.stage+1);document.getElementById('stageOv').hidden=false}
-function nextStage(){clearMarks();P.x=0;P.z=6;P.yaw=0;P.pitch=0;joy=null;AT.clear();for(const e of S.ents)scene.remove(e.m.g);for(const p of S.proj)scene.remove(p.mesh);for(const c of S.crates)scene.remove(c.g);
+function nextStage(){stopCelebration();clearMarks();P.x=0;P.z=6;P.yaw=0;P.pitch=0;joy=null;AT.clear();for(const e of S.ents)scene.remove(e.m.g);for(const p of S.proj)scene.remove(p.mesh);for(const c of S.crates)scene.remove(c.g);
   cityCovers.forEach(c=>c.busy=0);coastCovers.forEach(c=>c.busy=0);hillsCovers.forEach(c=>c.busy=0);for(const j of S.jets)scene.remove(j.g);S.jets=[];
   S.ents=[];S.proj=[];S.crates=[];S.strikes=[];S.q=[];S.next=0;S.stage++;S.goal=5*S.stage;S.stageTanks=0;S.stageDone=0;S.bossPhase=0;
   S.hp=100;S.cover=100;updateCover();S.rockets=30;S.ammo=W().mag;S.snAmmo=W().snMag;setTierVis();setWeapon(S.weapon==='art'?'rifle':S.weapon);applyLook(S.stage);nextWave();if(S.stage>1&&tierOf(S.stage)>tierOf(S.stage-1))S.upg=1;
@@ -931,7 +944,7 @@ function explode(p,r,own,scale=1,dmg){const d=camera.position.distanceTo(p);sfx(
   if(own)for(const e of S.ents){if(!alive(e))continue;const c=V(e.x,e.type==='h'?e.y:e.type==='b'?2:1,e.z),dd=c.distanceTo(p);
     if(e.type==='s'&&dd<r)kill(e);else if(e.type!=='s'&&dd<r+2.5){e.hp-=dmg??(e.type==='h'?18:14);e.hit=.2;if(e.hp<=0)kill(e)}}}
 function kill(e){S.feed.unshift({v:VNAME[e.type],w:S.killW||S.weapon,head:!!e.head,t:5,me:e.type!=='s'});if(S.feed.length>5)S.feed.pop();S.art=Math.min(1,S.art+.07);if(e.type==='s'){if(e.cv)e.cv.busy=0;sfx('scream',{dist:-e.z,pan:panOf(e.x)});e.bubble=1.2;e.st='dead';e.dead=0;S.kills++;addScore(e.head?150:100,V(e.x,3.2,e.z),e.head?'رأس!':'')}
-  else if(e.type==='b'){e.st='wreck';e.dead=0;S.bosses++;addScore(3000,V(e.x,4,e.z),'القائد!');S.slow=1.6;if(S.bossPhase===1){S.bossPhase=2;S.stageDelay=5.5;celebrate(14,5.5)}S.rockets=Math.max(S.rockets,30);S.hp=100;S.cover=100;updateCover();explode(V(e.x,2,e.z),0,false,2.4);
+  else if(e.type==='b'){e.st='wreck';e.dead=0;S.bosses++;addScore(3000,V(e.x,4,e.z),'القائد!');S.slow=1.6;if(S.bossPhase===1){S.bossPhase=2;S.stageDelay=5.5;celebrate(14,5.5);sfx('victory')}S.rockets=Math.max(S.rockets,30);S.hp=100;S.cover=100;updateCover();explode(V(e.x,2,e.z),0,false,2.4);
     e.m.off.visible=false;e.m.g.traverse(o=>{if(o.isMesh&&o!==e.m.bigFlag)o.material=M.char});S.banner={t:3.5,text:'سقط قائد الفرقة! النصر'}}
   else if(e.type==='h'){e.st='wreck';e.dead=0;e.vy=0;S.helis++;S.stageTanks++;addScore(700,V(e.x,e.y+2,e.z),'مروحية!');S.slow=1;explode(V(e.x,e.y,e.z),0,false,1.4);e.m.g.traverse(o=>{if(o.isMesh&&o.material!==M.dark)o.material=M.char})}
   else{e.st='wreck';e.dead=0;S.tanks++;S.stageTanks++;addScore(500,V(e.x,4,e.z),'دبابة!');S.slow=.9;explode(V(e.x,2,e.z),0,false,1.6);
@@ -1289,7 +1302,7 @@ const bRifle=document.getElementById('bRifle'),bRpg=document.getElementById('bRp
 const bArt=document.getElementById('bArt'),bSnp=document.getElementById('bSnp');bSnp.onclick=()=>S&&setWeapon('snp');bRifle.onclick=()=>S&&setWeapon('rifle');bRpg.onclick=()=>S&&setWeapon('rpg');bArt.onclick=()=>S&&setWeapon('art');
 document.getElementById('bReload').onclick=()=>S&&startReload();
 addEventListener('keydown',e=>{if(!S)return;if(e.key==='1')setWeapon('rifle');if(e.key==='2')setWeapon('rpg');if(e.key==='3')setWeapon('art');if(e.key==='4')setWeapon('snp');if(e.key==='r'||e.key==='R'||e.key==='ق')startReload()});
-function begin(n,mode='defend'){paused=false;document.getElementById('pauseOv').hidden=true;lastMode=mode;P.x=0;P.z=6;P.yaw=0;P.pitch=0;zoomT=1;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume?.()}catch(e){}
+function begin(n,mode='defend'){stopCelebration();paused=false;document.getElementById('pauseOv').hidden=true;lastMode=mode;P.x=0;P.z=6;P.yaw=0;P.pitch=0;zoomT=1;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume?.()}catch(e){}
   setMode(mode);newGame();setTierVis();running=true;document.getElementById('start').hidden=true;document.getElementById('over').hidden=true;document.getElementById('stageOv').hidden=true;
   if(n>1){S.stage=n-1;S.wave=0;nextStage()}}
 document.querySelectorAll('[data-stage]').forEach(b=>b.onclick=()=>begin(+b.dataset.stage));
