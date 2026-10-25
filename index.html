@@ -825,7 +825,7 @@ function makeJet(){const g=new THREE.Group(),m=mat(0x7d868c,{emissive:0x101418})
   const rf=new THREE.Mesh(new THREE.PlaneGeometry(.9,.6),new THREE.MeshLambertMaterial({map:regimeFlagTex,side:THREE.DoubleSide}));rf.position.set(.08,1.5,-3.8);rf.rotation.y=Math.PI/2;g.add(rf);
   g.scale.setScalar(1.3);return g}
 function spawnJet(){const dir=Math.random()<.5?1:-1,n=Math.random()<.35?2:1;
-  for(let k=0;k<n;k++){const g=makeJet(),j={g,dir,x:-dir*(290+k*22),y:R(34,55)+k*3,z:R(-110,-45)-k*8,v:R(95,120),bombs:Math.random()<.5&&k===0,bx:R(-25,25)};
+  for(let k=0;k<n;k++){const near=k===0&&MODE==='defend'&&Math.random()<.4,g=makeJet(),j={g,dir,near,x:-dir*(290+k*22),y:near?R(24,30):R(34,55)+k*3,z:near?R(-26,-18):R(-110,-45)-k*8,v:near?R(85,100):R(95,120),bombs:near||(Math.random()<.5&&k===0),bx:near?R(-6,6)-dir*10:R(-25,25)};if(near)S.banner={t:2,text:'غارة جوية! احتمِ'};
     g.rotation.y=dir>0?Math.PI/2:-Math.PI/2;g.position.set(j.x,j.y,j.z);g.traverse(o=>{if(o.isMesh&&o.material&&o.material.map===regimeFlagTex)o.visible=false});scene.add(g);S.jets.push(j)}
   sfx('jet',{dir})}
 /* ---------- fireworks ---------- */
@@ -950,6 +950,9 @@ function kill(e){S.feed.unshift({v:VNAME[e.type],w:S.killW||S.weapon,head:!!e.he
   else{e.st='wreck';e.dead=0;S.tanks++;S.stageTanks++;addScore(500,V(e.x,4,e.z),'دبابة!');S.slow=.9;explode(V(e.x,2,e.z),0,false,1.6);
     e.m.g.traverse(o=>{if(o.isMesh)o.material=M.char});e.m.turret.rotation.set(.25,R(-.6,.6),.15);e.m.turret.position.y+=.3}}
 function diff(){return S&&S.stage===2&&(S.bossPhase||S.stageTanks>=S.goal*.6)?.55:1}
+function nearBlast(p){const d=Math.hypot(p.x-P.x,p.z-P.z);S.shake=Math.max(S.shake,1.3);if(!running)return;
+  if(d<14){hurt(Math.max(4,18-d)*R(.8,1.1));debris(p,6);S.cover=Math.max(0,S.cover-R(3,6));updateCover();sfx('hit')}
+  for(let i=0;i<10;i++)particle(V(p.x+R(-2,2),R(.5,2),p.z+R(-2,2)),{color:0x8a7a66,size:R(1.5,3),vel:V(R(-3,3),R(3,8),R(1,5)),life:R(1.2,2),grow:2,op:.7,grav:-6})}
 function hurt(n){n*=diff()*(1+(S.stage-1)*.08);if(MODE==='assault'&&S.cover>0){const a=Math.min(S.cover,n*.5);S.cover-=a;n-=a}S.lastHurt=S.time;S.hp=Math.max(0,S.hp-n);S.hurt=.4;S.shake=Math.max(S.shake,.25);if(S.hp<=0)gameOver()}
 function wallHit(){const p=V(R(-2.4,2.4),PH+R(.45,.85),1);dust(p,4,0x7b6a57)}
 
@@ -971,11 +974,11 @@ function update(dt){
   if(S.weapon==='rpg')warhead.visible=S.rockets>0&&S.cd<=.3;
   S.art=Math.min(1,S.art+dt/40);bArt.disabled=S.art<1;
   if(firing&&S.cd<=0){if(S.weapon==='rifle'){if(S.ammo>0&&S.reload<=0)fireRifle()}else if(S.weapon==='art'){callArtillery();firing=false}else if(S.weapon==='snp'){if(S.snAmmo>0&&S.snReload<=0)fireSniper();firing=false}else{fireRpg();if(!rapidRpg())firing=false}}
-  for(const k of S.strikes){k.t-=dt;if(!k.w&&k.t<1.25){k.w=1;if(k.i%2===0)sfx('incoming',{pan:panOf(k.p.x)})}if(k.t<=0){k.done=1;k.cos?explode(k.p,0,false,1.8):(S.killW='art',explode(k.p,5,true,1.6,12))}}
+  for(const k of S.strikes){k.t-=dt;if(!k.w&&k.t<1.25){k.w=1;if(k.i%2===0)sfx('incoming',{pan:panOf(k.p.x)})}if(k.t<=0){k.done=1;k.cos?(explode(k.p,0,false,k.near?2.3:1.8),k.near&&nearBlast(k.p)):(S.killW='art',explode(k.p,5,true,1.6,12))}}
   S.strikes=S.strikes.filter(k=>!k.done);
   S.jetT-=dt;if(S.jetT<=0){S.jetT=R(16,32);spawnJet()}
   for(const j of S.jets){j.x+=j.dir*j.v*dt;j.g.position.set(j.x,j.y,j.z);j.g.rotation.z=j.dir*Math.sin(j.x/60)*.25;
-    if(j.bombs&&!j.dropped&&Math.abs(j.x-j.bx)<8){j.dropped=1;for(let i=0;i<4;i++)S.strikes.push({t:1.4+i*.18,p:V(j.bx+j.dir*i*6+R(-3,3),.4,R(j.z-10,j.z+10)),w:1,cos:1})}
+    if(j.bombs&&!j.dropped&&Math.abs(j.x-j.bx)<8){j.dropped=1;if(j.near){sfx('incoming',{pan:panOf(j.bx)});for(let i=0;i<4;i++)S.strikes.push({t:1.3+i*.22,p:V(j.bx+j.dir*i*5.5+R(-1.5,1.5),.4,R(-9,-3.5)),w:1,cos:1,near:1})}else for(let i=0;i<4;i++)S.strikes.push({t:1.4+i*.18,p:V(j.bx+j.dir*i*6+R(-3,3),.4,R(j.z-10,j.z+10)),w:1,cos:1})}
     if(Math.abs(j.x)>300)j.gone=1}
   S.jets=S.jets.filter(j=>{if(j.gone){scene.remove(j.g);return false}return true});
   if(S.q.length){S.qt-=dt;if(S.qt<=0){{const n0=S.ents.length;spawn(S.q.shift());if(MODE==='assault'&&S.ents.length>n0)placeA(S.ents[S.ents.length-1])}S.qt=R(1,2.4)-Math.min(S.wave*.05,.5)}}
